@@ -1,0 +1,43 @@
+plugins {
+    // 出现  Could not find implementation class DependenciesPlugin，添加下面插件解决了改问题
+    id 'org.jetbrains.kotlin.jvm'
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+// gradlePlugin 定义了插件 ID 和插件实现类的映射关系
+gradlePlugin{
+    plugins{
+        register {
+            id = 'com.apricity.plugin.dependencies'
+            implementationClass='com.apricity.plugin.DependenciesPlugin'
+        }
+    }
+}
+group 'com.apricity.plugin'
+version '1.0.0'
+
+publishing {
+    // 配置Plugin GAV
+    publications {
+        maven(MavenPublication){
+            groupId = group
+            artifactId = 'dependencies'
+            version = version
+
+            from components.java
+        }
+    }
+    // 配置本地仓库地址
+    repositories {
+        maven {
+            url layout.buildDirectory.dir("maven-repo")
+        }
+//        ivy {
+//            url layout.buildDirectory.dir("ivy-repo")
+//        }
+    }
+}
+
+dependencies {
+    implementation 'com.android.tools.build:gradle:4.1.1'
+}

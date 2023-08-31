@@ -1,0 +1,160 @@
+import org.gradle.work.ChangeType
+import org.gradle.work.Incremental
+import org.gradle.work.InputChanges
+tasks.register("tccTask"){
+    it.configure {
+        description = "this is tccTask"
+        group = "help"
+    }
+    it.doFirst {
+        println("$it.name = doFirst 111")
+    }
+    it.doFirst {
+        println("$it.name = doFirst 222")
+    }
+    println("Task name = $it.name")
+    it.doLast {
+        println("$it.name = doLast 111")
+    }
+    it.doLast {
+        println("$it.name = doLast 222")
+    }
+}
+
+/**
+ * 使用自定义Task，类型传入自定义的task类
+ */
+tasks.register("myTask1", HuanTask){
+    taskName = "this is input taskName"
+}
+
+/**
+ * 自定义一个类，继承自DefaultTask
+ * @Internal 需要对外暴露的参数使用@Internal注解
+ * @TaskAction action需要添加@TaskAction注解
+ */
+class HuanTask extends DefaultTask{
+    @Internal
+    def taskName = "huanhuan"
+
+    @TaskAction
+    def MyAction1(){
+        println("$taskName--action 11")
+    }
+    @TaskAction
+    def MyAction2(){
+        println("$taskName--action 22")
+    }
+}
+
+/**
+ * 增量构建
+ * 输入输出没有变化 UP-TO-DATE
+ * 执行两次CopyTask
+ *  第一次 1 actionable task: 1 executed
+ *  第二次 1 actionable task: 1 up-to-date
+ */
+class CopyTask extends DefaultTask {
+    @InputFiles
+    FileCollection from
+    @OutputDirectory
+    Directory to
+
+    @TaskAction
+    def execute(){
+        File file = from.getSingleFile()
+        if (file.isDirectory()){
+            from.getAsFileTree().each {
+                copyFileToDir(it, to)
+            }
+        }
+    }
+
+    private static def copyFileToDir(File file, Directory dir){
+        def names = file.name.split("\\.")
+        println(file.name+"===="+names)
+        def fileName = names[0]+"-copy."+names[1]
+        File dest = new File("${dir.getAsFile().path}/$fileName")
+        if (!dest.exists()){
+            dest.createNewFile()
+        }
+        dest.withDataOutputStream {
+            it.write(new FileInputStream(file).getBytes())
+        }
+    }
+}
+
+tasks.register("CopyTask", CopyTask){
+    from = files("from")
+    to = layout.projectDirectory.dir("to")
+}
+
+/**
+ * 增量构建
+ * 部分变化，只执行变化的部分，没有变化的文件不进行修改
+ * 文件夹from-add to-add
+ * 第一次操作 from-add中创建aa-add.md
+ *      输出 isIncremental = false
+             changeType = ADDED, changeFile = aa-add.md
+             aa-add.md====[aa-add, md]
+
+             BUILD SUCCESSFUL in 1s
+             1 actionable task: 1 executed
+
+ * 第二次操作 from-add中创建aa-add2.md
+ *      输出 isIncremental = true
+             changeType = ADDED, changeFile = aa-add2.md
+             aa-add2.md====[aa-add2, md]
+
+             BUILD SUCCESSFUL in 1s
+             1 actionable task: 1 executed
+
+ * 第三次操作 from-add中修改aa-add.md
+ *      输出 isIncremental = true
+             changeType = MODIFIED, changeFile = aa-add.md
+             aa-add.md====[aa-add, md]
+
+             BUILD SUCCESSFUL in 977ms
+             1 actionable task: 1 executed
+ */
+class CopyAddTask extends DefaultTask {
+    @Incremental //指定增量输入属性,和InputFiles、InputDirectory一起使用，指示gradle跟踪带注释文件的更改
+    @InputFiles
+    FileCollection from
+    @OutputDirectory
+    Directory to
+
+    @TaskAction
+    void execute(InputChanges inputChanges){
+        boolean isIncremental = inputChanges.incremental
+        println("isIncremental = $isIncremental")
+        inputChanges.getFileChanges(from).each {
+            if (it.fileType!=FileType.DIRECTORY){
+                ChangeType changeType = it.changeType
+                String fileName = it.file.name
+                println("changeType = $changeType, changeFile = $fileName")
+                if (changeType != ChangeType.REMOVED){
+                    copyFileToDir(it.file, to)
+                }
+            }
+        }
+    }
+
+    private static def copyFileToDir(File file, Directory dir){
+        def names = file.name.split("\\.")
+        println(file.name+"===="+names)
+        def fileName = names[0]+"-copy."+names[1]
+        File dest = new File("${dir.getAsFile().path}/$fileName")
+        if (!dest.exists()){
+            dest.createNewFile()
+        }
+        dest.withDataOutputStream {
+            it.write(new FileInputStream(file).getBytes())
+        }
+    }
+}
+
+tasks.register("CopyAddTask", CopyAddTask){
+    from = files("from-add")
+    to = layout.projectDirectory.dir("to-add")
+}

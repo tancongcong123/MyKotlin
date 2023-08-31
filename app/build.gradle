@@ -1,0 +1,136 @@
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'com.apricity.plugin.dependencies'
+}
+apply from : '../myTask.gradle'
+// apply调用的是PluginAware接口的apply()方法,参数是一个map用来映射plugin id
+apply plugin: TccPlugin
+
+printDependencies {
+    enable = true
+}
+
+android {
+    compileSdkVersion 32
+    buildToolsVersion "30.0.3"
+
+    defaultConfig {
+        applicationId "com.apricity.mykotlin"
+        minSdkVersion 16
+        targetSdkVersion 32
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+tcc{
+    title = "插件开发"
+    msg = "this is extension message"
+}
+tcc2{
+    title = "嵌套扩展"
+    year = 2023
+    tccSub{
+        author = "doudou"
+    }
+}
+dependencies {
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation 'androidx.core:core-ktx:1.2.0'
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'com.google.android.material:material:1.1.0'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.2.2'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.2.2'
+    testImplementation 'junit:junit:4.+'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+}
+
+/**
+ * sync输出：
+ * Starting Gradle Daemon...
+     Gradle Daemon started in 2 s 501 ms
+
+     > Configure project :app
+     这是插件TccPlugin
+     task name is huan
+     task name is zong
+     Task name = tccTask
+ *
+ * sync之后执行.\gradlew :app:TccPluginTask
+ * 输出：
+     > Configure project :app
+     这是插件TccPlugin
+
+     > Task :app:TccPluginTask
+     这是插件TccPlugin，他创建了一个task=TccPluginTask
+     插件扩展:插件开发 msg=this is extension message
+     插件嵌套扩展:嵌套扩展 year=2023 author=doudou
+
+     BUILD SUCCESSFUL in 21s
+     1 actionable task: 1 executed
+
+ *
+ */
+class TccPlugin implements Plugin<Project>{
+    @Override
+    void apply(Project project) {
+        println("这是插件${this.class.name}")
+        // 插件扩展 接受两个参数 名字，扩展对象 扩展对象的方法可以获取自定义的配置参数
+        def extension = project.extensions.create("tcc", TccPluginExtension)
+        // 嵌套扩展
+        def extension2 = project.extensions.create("tcc2", TccPluginExtension2, project)
+        extension2.
+        // 插件创建有个task
+        project.task("TccPluginTask"){
+            task->task.doLast{
+                println("这是插件${this.class.name}，他创建了一个task=${task.name}")
+                println("插件扩展:"+extension.title.get()+" msg="+extension.msg.get())
+                println("插件嵌套扩展:"+extension2.title+" year="+extension2.year+" author="+extension2.subExtension.author)
+            }
+        }
+    }
+}
+
+/**
+ * 定义一个插件扩展对象 可以是一个接口也可以是一个类
+ * 然后把扩展添加给Plugin使用
+ */
+interface TccPluginExtension{
+    Property<String> getTitle()
+    Property<String> getMsg()
+}
+/**
+ * 嵌套扩展
+ */
+class TccPluginExtension2{
+    Project project
+    String title
+    int year
+    SubExtension subExtension
+    TccPluginExtension2(Project project){
+        this.project = project
+        subExtension = project.extensions.create('tccSub', SubExtension.class)
+    }
+}
+class SubExtension{
+    String author
+}
