@@ -62,6 +62,7 @@ dependencies {
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+    implementation 'com.github.zeshaoaaa:LaunchStarter:0.0.1'
 }
 
 /**
@@ -98,7 +99,6 @@ class TccPlugin implements Plugin<Project>{
         def extension = project.extensions.create("tcc", TccPluginExtension)
         // 嵌套扩展
         def extension2 = project.extensions.create("tcc2", TccPluginExtension2, project)
-        extension2.
         // 插件创建有个task
         project.task("TccPluginTask"){
             task->task.doLast{
