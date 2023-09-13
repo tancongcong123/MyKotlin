@@ -1,5 +1,7 @@
 package com.apricity.mykotlin
 
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.os.Debug
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -7,7 +9,12 @@ import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
+import androidx.annotation.RequiresApi
 import androidx.core.os.TraceCompat
+import com.apricity.mykotlin.accessibility.AutoAccessibilityService
+import com.apricity.mykotlin.accessibility.printNodeInfo
+import com.apricity.mykotlin.ext.isAccessibilityOpened
+import com.apricity.mykotlin.ext.openAccessibilitySetting
 
 /**
  * navigation组件旨在用于具有一个主activity和多个fragment的应用。
@@ -16,19 +23,29 @@ import androidx.core.os.TraceCompat
  */
 class MainActivity : AppCompatActivity() {
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Debug.startMethodTracing()
-        TraceCompat.beginSection("mainActivity onCreate")
+//        Debug.startMethodTracing()
+//        TraceCompat.beginSection("mainActivity onCreate")
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.toolbar))
 
         findViewById<FloatingActionButton>(R.id.fab).setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show()
+//            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+//                .setAction("Action", null).show()
+            println("-----------print node info")
+            AutoAccessibilityService.autoAccessibilityService?.printNodeInfo(true)
         }
-        Debug.stopMethodTracing()
-        TraceCompat.endSection()
+//        Debug.stopMethodTracing()
+//        TraceCompat.endSection()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if(!baseContext.isAccessibilityOpened(AutoAccessibilityService::class.java)){
+            baseContext.openAccessibilitySetting()
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
