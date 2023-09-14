@@ -31,10 +31,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.toolbar))
 
-        findViewById<FloatingActionButton>(R.id.fab).setOnClickListener { view ->
-//            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+        findViewById<FloatingActionButton>(R.id.fab).setOnClickListener {
+//            Snackbar.make(it, "Replace with your own action", Snackbar.LENGTH_LONG)
 //                .setAction("Action", null).show()
-            println("-----------print node info")
+//            println("-----------print node info")
             AutoAccessibilityService.autoAccessibilityService?.printNodeInfo(true)
         }
 //        Debug.stopMethodTracing()
