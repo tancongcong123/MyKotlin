@@ -1,6 +1,7 @@
 package com.apricity.mykotlin
 
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Debug
@@ -43,9 +44,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if(!baseContext.isAccessibilityOpened(AutoAccessibilityService::class.java)){
-            baseContext.openAccessibilitySetting()
-        }
+//        if(!baseContext.isAccessibilityOpened(AutoAccessibilityService::class.java)){
+//            baseContext.openAccessibilitySetting()
+//        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -61,6 +62,20 @@ class MainActivity : AppCompatActivity() {
         return when (item.itemId) {
             R.id.action_settings -> true
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    /**
+     * apply接受一个lambda类型的参数block，且block的调用者是对象本身
+     */
+    fun startActivity(){
+        Intent(this, MainActivity::class.java).apply {
+            action = "actionAAA"
+            putExtras(Bundle().apply {
+                putString("aa", "aa")
+                putString("bb", "bb")
+            })
+            startActivity(this)
         }
     }
 }

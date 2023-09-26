@@ -1,0 +1,99 @@
+针对java混淆，ProGuard就是常用的混淆工具，且不仅仅是混淆，它还同时能进行压缩、优化等
+ProGuard的工作过程包括四个步骤：shrink、optimize、obfuscate、preverigy，四个步骤都是可选的，但是执行顺序是不变的
+    shrink：检测并删除项目中无用的类、字段、方法和属性
+    optimize：优化字节码，移除无用指令，或者进行指令优化
+    obfuscate：代码混淆，将代码中的类、字段、方法和属性等名称使用无意义的名称进行替换，减少反编译后的可读性
+    preverigy：针对java1.6及以上版本进行预校验，校验StackMap/StackMapTable属性，在编译时可以关闭，加快编译速度
+Android构建中，在AGP3.4.0之前也是使用ProGuard就行代码混淆，但是在之后就使用R8编译器进行代码混淆，但是R8编译器还是兼容ProGuard的配置规则
+R8可以进行
+    [代码缩减]：检测代码中未使用到的类、字段、方法和属性等，并移除
+        R8会根据入口，检测代码，并构建一张图表，列出运行中可能用到的方法、成员变量和类，并将没有关联到的代码视为可以出的代码
+        minifyEnabled设置为true，会默认启动R8代码缩减功能
+        需要注意：反射调用的情况；JNI调用的情况，R8并未对反射和JNI等情况进行检测，如果配置文件中未处理，则这部分代码就会被丢弃
+        解决：
+            1 -Keep public class MyClass 在配置文件中使用-Keep对这部分类进行说明
+            2 给需要保留的代码添加@Keep注解（前提：声明使用了AndroidX并且使用AGP默认的ProGuard文件）
+        R8配置文件的来源
+            1 AndroidStudio 位置：/proguard-rules.pro
+            2 AGP插件 位置：由AGP编译生成的proguard-android-optimize.txt
+                编译后会在\build\intermediates\proguard-files\目录下生成3个文件
+                proguard-android-optimize.txt-4.1.1（4.1.1表示当前AGP插件版本） ——> 需要进行optimize代码优化的ProGuard配置文件
+                proguard-android.txt-4.1.1 ——> 不需要进行optimize代码优化的ProGuard配置文件
+            3 库依赖项
+                引入的aar或者jar包的库中默认包含了proguard优化规则，则在编译过程中也会被纳入R8配置中，所以需要注意规则冲突的情况
+            4 AAPT2
+                位置：minifyEnabled设置为true，构建项目后<module-dir>/build/intermediates/proguard-rules/debug/aapt_rules.txt
+                AAPT2会根据对应用清单中的类、布局及其他应用资源的引用，生成保留规则。例如，AAPT2 会为您在应用清单中注册为入口点的每个activity添加一个保留规则。
+            5 自定义配置文件
+                位置：默认情况下，当您使用AndroidStudio创建新模块时，IDE会创建<module-dir>/proguard-rules.pro，以便您添加自己的规则
+                您可以添加其他配置，R8会在编译时应用这些配置。如果您将minifyEnabled属性设为true，R8会将来自上述所有可用来源的规则组合在一起，但是需要注意依赖库引入导致的规则冲突问题。
+        输出所有规则的完整报告，在proguard-rules.pro中添加
+            // You can specify any path and filename.
+            -printconfiguration ~/tmp/full-r8-config.txt
+        添加格外的proguard文件
+            可以通过将相应文件添加到模块的build.gradle文件的proguardFiles属性中
+            android {
+                ...
+                buildTypes {
+                    release {
+                        minifyEnabled true
+                        proguardFiles
+                        getDefaultProguardFile('proguard-android-optimize.txt'),
+                        // List additional ProGuard rules for the given build type here. By default,
+                        // Android Studio creates and includes an empty rules file for you (located
+                        // at the root directory of each module).
+                        'proguard-rules.pro'
+                    }
+                }
+                flavorDimensions "version"
+                productFlavors {
+                    flavor1 {
+                    ...
+                    }
+                    flavor2 {
+                        proguardFile 'flavor2-rules.pro'
+                    }
+                }
+            }
+    [资源缩减]：资源缩减是在代码缩减之后进行的，只有去除了不需要的代码后，才知道那些代码里面的资源也是不被引入的，可以移除的
+        添加shrinkResources true即可，前提是开启了minifyEnabled
+        也可以对资源文件添加白名单，tools:keep指定需要保留的资源；tools:discard指定可以舍弃的资源
+            <?xml version="1.0" encoding="utf-8"?>
+            <resources xmlns:tools="http://schemas.android.com/tools"
+            tools:keep="@layout/l_used*_c,@layout/l_used_a,@layout/l_used_b*"
+            tools:discard="@layout/unused2" />
+    [代码混淆]：对类、方法名、属性名使用无意义的字符表示
+        混淆规则：
+            -keep class com.tcc.text.* 一颗星表示保留当前包下的类名，如果有子包，子包中的类会被混淆
+            -keep class com.tcc.text.** 两颗星表示保留当前包下的类名，如果有子包，子包中的类也会被保留
+            -keep class com.tcc.text.*{*;} 保留类名，内容也会保留
+            -keep class * extends android.app.Activity 保留所有继承了Activity的类
+            -keepclassmembers class cc.ninty.chat.ui.fragment.ScriptFragment$JavaScriptInterface {public *;} 保留内部类不被混淆使用$符号
+            保留类中的特定内容
+                <init> 匹配所有构造器
+                <fields> 匹配所有域
+                <methods> 匹配所有方法
+                -keep class cn.tcc.test.One {
+                    public <methods>; 保留类one中的所有public方法
+                }
+            # keep：包留类和类中的成员，防止他们被混淆
+            # keepnames:保留类和类中的成员防止被混淆，但成员如果没有被引用将被删除
+            # keepclassmembers :只保留类中的成员，防止被混淆和移除。
+            # keepclassmembernames:只保留类中的成员，但如果成员没有被引用将被删除。
+            # keepclasseswithmembers:如果当前类中包含指定的方法，则保留类和类成员，否则将被混淆。
+            # keepclasseswithmembernames:如果当前类中包含指定的方法，则保留类和类成员，如果类成员没有被引用，则会被移除。
+        AS混淆编译后，在 /build/outputs/mapping/release/下面会生成以下四个文件：
+            usage:未使用的文件，也就是移除后的文件
+            seeds:未进行混淆的类和成员
+            mapping：混淆前后的映射文件，这个文件在使用反混淆的时候有用
+            configuration：所有ProGuard文件整合后的规则文件
+        注意
+            保留JNI方法 -keepclasswithmembersnames class*{native <methods>;}
+            保留反射用到的类
+            AndroidMainfest中的类不混淆，所有四大组件和Application的子类和Framework层下所有的类默认不会进行混淆，自定义的View默认也不会被混淆。所以像网上贴的很多排除自定义View，或四大组件被混淆的规则在Android Studio中是无需加入的。
+            有用到WebView的JS调用也需要保证写的接口方法不混淆
+            枚举、数据类bean等不混淆
+    [代码优化]
+        如果您的代码从未采用过给定if/else语句的else{}分支，R8可能会移除else{}分支的代码。
+        如果您的代码只在一个位置调用某个方法，R8可能会移除该方法并将其内嵌在这一个调用点。
+        如果R8确定某个类只有一个唯一子类且该类本身未实例化（例如，一个仅由一个具体实现类使用的抽象基类），它就可以将这两个类组合在一起并从应用中移除一个类
