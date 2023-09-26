@@ -1,4 +1,4 @@
-package com.apricity.plugin
+package com.apricity.libnet
 
 import org.junit.Test
 

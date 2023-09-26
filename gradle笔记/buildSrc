@@ -1,0 +1,8 @@
+kotlin+buildSrc版本管理
+    1 根目录新建module名称必须为buildSrc 手动创建kotlin jvm 创建完是一个空的文件夹
+    2 新建build.gradle.kts
+    3 buildSrc内新建src/main/kotlin文件夹
+    4 添加依赖项
+    5 进行gradle Sync
+    6 在module中添加import main.kotlin.* 
+    7 可以依赖成功了

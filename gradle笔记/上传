@@ -32,3 +32,5 @@ git push -u origin main
     3 ssh -T git@github.com测试是否连接成功
         Hi tancongcong123! You've successfully authenticated, but GitHub does not provide shell access.
     4 连接成功即可push
+
+要撤消最近的提交，您可以执行以下命令 git rest HEAD~1

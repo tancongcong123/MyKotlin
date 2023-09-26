@@ -1,4 +1,4 @@
+include ':libNet'
 include ':plugin'
 include ':app'
 rootProject.name = "MyKotlin"
-
