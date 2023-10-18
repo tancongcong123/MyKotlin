@@ -1,4 +1,6 @@
 kotlin+buildSrc版本管理
+优点：相比于手动和ext支持IDE自动补全和跳转
+步骤
     1 根目录新建module名称必须为buildSrc 手动创建kotlin jvm 创建完是一个空的文件夹
     2 新建build.gradle.kts
     3 buildSrc内新建src/main/kotlin文件夹
